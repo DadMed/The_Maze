@@ -14,11 +14,12 @@ const int TEX_HEIGHT = 64;
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 SDL_Texture* wallTextures[4]; // Assuming 4 different wall textures
+SDL_Texture* groundTexture = NULL;
+SDL_Texture* skyTexture = NULL;
 
 // Example map (24x24)
 int worldMap[MAZE_MAP_WIDTH][MAZE_MAP_HEIGHT] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -79,10 +80,17 @@ void initialize_SDL() {
 }
 
 void loadTextures() {
-    wallTextures[0] = IMG_LoadTexture(renderer, "texture/brick_wall.jpg");
-    wallTextures[1] = IMG_LoadTexture(renderer, "texture/grass.jpg");
-    wallTextures[2] = IMG_LoadTexture(renderer, "texture/wooden_wall.jpg");
-    wallTextures[3] = IMG_LoadTexture(renderer, "texture/dbz.jpg");
+    wallTextures[0] = IMG_LoadTexture(renderer, "textures/brick_wall.jpg");
+    wallTextures[1] = IMG_LoadTexture(renderer, "textures/brick_floor.jpg");
+    wallTextures[2] = IMG_LoadTexture(renderer, "textures/wooden_wall.jpg");
+    wallTextures[3] = IMG_LoadTexture(renderer, "textures/dbz.jpg");
+    groundTexture = IMG_LoadTexture(renderer, "textures/grass.jpg");
+    skyTexture = IMG_LoadTexture(renderer, "textures/Sky.jpg");
+
+    if (!groundTexture || !skyTexture) {
+        fprintf(stderr, "Failed to load ground or sky texture! SDL_image Error: %s\n", IMG_GetError());
+        exit(1);
+    }
 
     for (int i = 0; i < 4; i++) {
         if (wallTextures[i] == NULL) {
@@ -96,12 +104,20 @@ void close_SDL() {
     for (int i = 0; i < 4; i++) {
         SDL_DestroyTexture(wallTextures[i]);
     }
+    SDL_DestroyTexture(groundTexture);
+    SDL_DestroyTexture(skyTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
 void drawWalls() {
+    SDL_Rect groundRect = { 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2 };
+    SDL_Rect skyRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT / 2 };
+
+    SDL_RenderCopy(renderer, groundTexture, NULL, &groundRect);
+    SDL_RenderCopy(renderer, skyTexture, NULL, &skyRect);
+
     for (int x = 0; x < SCREEN_WIDTH; x++) {
         double cameraX = 2 * x / (double)SCREEN_WIDTH - 1;
         double rayDirX = dirX + planeX * cameraX;
