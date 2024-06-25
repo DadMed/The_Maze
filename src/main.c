@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 
+const int MAP_WIDTH = 24;
+const int MAP_HEIGHT = 24;
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 

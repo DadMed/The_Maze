@@ -7,9 +7,7 @@
 extern const int MAP_WIDTH;
 extern const int MAP_HEIGHT;
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <SDL2/SDL.h>
+
 
 // Function prototypes
 void initialize_SDL();
