@@ -1,21 +1,18 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pedantic
 SDL_FLAGS = `sdl2-config --cflags --libs`
+LDLIBS = -lSDL2 -lSDL2_image -lm  # Link against SDL2 and SDL2_image libraries
 SRC = src/main.c
-OBJ = obj/main.o
+OBJ = $(SRC:.c=.o)
 TARGET = maze
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(SDL_FLAGS)
-
-obj/main.o: $(SRC)
-	mkdir -p obj
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $^ $(SDL_FLAGS) $(LDLIBS)
 
 clean:
-	rm -f obj/*.o $(TARGET)
+	rm -f $(OBJ) $(TARGET)
 
 .PHONY: all clean
 

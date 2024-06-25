@@ -4,14 +4,16 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
-const int MAP_WIDTH = 24;
-const int MAP_HEIGHT = 24;
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
+const int TEX_WIDTH = 64;
+const int TEX_HEIGHT = 64;
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
+SDL_Texture* wallTextures[4]; // Assuming 4 different wall textures
 
 // Example map (24x24)
 int worldMap[MAZE_MAP_WIDTH][MAZE_MAP_HEIGHT] = {
@@ -37,15 +39,19 @@ int worldMap[MAZE_MAP_WIDTH][MAZE_MAP_HEIGHT] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
 };
 
 // Player's position
-double posX = 22, posY = 12;  
+double posX = 22, posY = 12;
 // Direction vector
-double dirX = -1, dirY = 0; 
+double dirX = -1, dirY = 0;
 // Camera plane
-double planeX = 0, planeY = 0.66; 
+double planeX = 0, planeY = 0.66;
+
+const double moveSpeed = 0.05;
+const double rotSpeed = 0.03;
 
 void initialize_SDL() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -72,16 +78,32 @@ void initialize_SDL() {
     }
 }
 
+void loadTextures() {
+    wallTextures[0] = IMG_LoadTexture(renderer, "texture/brick_wall.jpg");
+    wallTextures[1] = IMG_LoadTexture(renderer, "texture/grass.jpg");
+    wallTextures[2] = IMG_LoadTexture(renderer, "texture/wooden_wall.jpg");
+    wallTextures[3] = IMG_LoadTexture(renderer, "texture/dbz.jpg");
+
+    for (int i = 0; i < 4; i++) {
+        if (wallTextures[i] == NULL) {
+            fprintf(stderr, "Failed to load texture %d! SDL_image Error: %s\n", i, IMG_GetError());
+            exit(1);
+        }
+    }
+}
+
 void close_SDL() {
+    for (int i = 0; i < 4; i++) {
+        SDL_DestroyTexture(wallTextures[i]);
+    }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
 void drawWalls() {
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     for (int x = 0; x < SCREEN_WIDTH; x++) {
-        double cameraX = 2 * x / (double)SCREEN_WIDTH - 1; 
+        double cameraX = 2 * x / (double)SCREEN_WIDTH - 1;
         double rayDirX = dirX + planeX * cameraX;
         double rayDirY = dirY + planeY * cameraX;
 
@@ -139,16 +161,32 @@ void drawWalls() {
         int drawEnd = lineHeight / 2 + SCREEN_HEIGHT / 2;
         if (drawEnd >= SCREEN_HEIGHT) drawEnd = SCREEN_HEIGHT - 1;
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_RenderDrawLine(renderer, x, drawStart, x, drawEnd);
+        int texNum = worldMap[mapX][mapY] - 1;
+
+        double wallX;
+        if (side == 0) wallX = posY + perpWallDist * rayDirY;
+        else wallX = posX + perpWallDist * rayDirX;
+        wallX -= floor((wallX));
+
+        int texX = (int)(wallX * (double)TEX_WIDTH);
+        if (side == 0 && rayDirX > 0) texX = TEX_WIDTH - texX - 1;
+        if (side == 1 && rayDirY < 0) texX = TEX_WIDTH - texX - 1;
+
+        for (int y = drawStart; y < drawEnd; y++) {
+            int d = y * 256 - SCREEN_HEIGHT * 128 + lineHeight * 128;
+            int texY = ((d * TEX_HEIGHT) / lineHeight) / 256;
+            SDL_Rect srcRect = { texX, texY, 1, 1 };
+            SDL_Rect dstRect = { x, y, 1, 1 };
+            SDL_RenderCopy(renderer, wallTextures[texNum], &srcRect, &dstRect);
+        }
     }
 }
 
 int main(int argc, char* args[]) {
     (void)argc;
     (void)args;
-    printf("MAP_WIDTH: %d, MAP_HEIGHT: %d\n", MAP_WIDTH, MAP_HEIGHT);
     initialize_SDL();
+    loadTextures();
 
     int quit = 0;
     SDL_Event e;
@@ -157,6 +195,37 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_QUIT) {
                 quit = 1;
+            } else if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP:
+                        if (worldMap[(int)(posX + dirX * moveSpeed)][(int)posY] == 0) posX += dirX * moveSpeed;
+                        if (worldMap[(int)posX][(int)(posY + dirY * moveSpeed)] == 0) posY += dirY * moveSpeed;
+                        break;
+                    case SDLK_DOWN:
+                        if (worldMap[(int)(posX - dirX * moveSpeed)][(int)posY] == 0) posX -= dirX * moveSpeed;
+                        if (worldMap[(int)posX][(int)(posY - dirY * moveSpeed)] == 0) posY -= dirY * moveSpeed;
+                        break;
+                    case SDLK_RIGHT:
+                        {
+                            double oldDirX = dirX;
+                            dirX = dirX * cos(-rotSpeed) - dirY * sin(-rotSpeed);
+                            dirY = oldDirX * sin(-rotSpeed) + dirY * cos(-rotSpeed);
+                            double oldPlaneX = planeX;
+                            planeX = planeX * cos(-rotSpeed) - planeY * sin(-rotSpeed);
+                            planeY = oldPlaneX * sin(-rotSpeed) + planeY * cos(-rotSpeed);
+                        }
+                        break;
+                    case SDLK_LEFT:
+                        {
+                            double oldDirX = dirX;
+                            dirX = dirX * cos(rotSpeed) - dirY * sin(rotSpeed);
+                            dirY = oldDirX * sin(rotSpeed) + dirY * cos(rotSpeed);
+                            double oldPlaneX = planeX;
+                            planeX = planeX * cos(rotSpeed) - planeY * sin(rotSpeed);
+                            planeY = oldPlaneX * sin(rotSpeed) + planeY * cos(rotSpeed);
+                        }
+                        break;
+                }
             }
         }
 
@@ -171,4 +240,3 @@ int main(int argc, char* args[]) {
     close_SDL();
     return 0;
 }
-
