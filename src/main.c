@@ -14,7 +14,7 @@ SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 
 // Example map (24x24)
-int worldMap[MAP_WIDTH][MAP_HEIGHT] = {
+int worldMap[MAZE_MAP_WIDTH][MAZE_MAP_HEIGHT] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
